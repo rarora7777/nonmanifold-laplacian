@@ -23,6 +23,8 @@
 
 #include <sstream>
 
+#include <iostream>
+
 using namespace geometrycentral;
 using namespace geometrycentral::surface;
 
@@ -46,6 +48,7 @@ double massReplaceVal = -1e-3;
 
 // Viz Parameters
 bool withGUI = true;
+bool withDebugInfo = false;
 float bubbleScale = .2;
 int subdivLevel = 2;
 int pointsPerTriEdge = 10;
@@ -227,11 +230,12 @@ int main(int argc, char** argv) {
   args::ValueFlag<double> laplacianReplaceValArg(algorithmOptions, "laplacianReplace", "For any unreferenced vertices in the input, put this this value in the diagonal of the Laplace matrix. Default: 1", {"laplacianReplace"}, 1.);
   args::ValueFlag<double> massReplaceValArg(algorithmOptions, "massReplace", "For any unreferenced vertices in the input, put this this value in the diagonal of the mass matrix. Negative values will interpreted relative to the smallest mass entry among referenced vertices, like X times the smallest mass. Default: -1e-3", {"massReplace"}, -1e-3);
 
-  args::Group output(parser, "ouput");
+  args::Group output(parser, "output");
   args::Flag gui(output, "gui", "open a GUI after processing and generate some visualizations", {"gui"});
   args::ValueFlag<std::string> outputPrefixArg(output, "outputPrefix", "Prefix to prepend to output file paths. Default: tufted_", {"outputPrefix"}, "tufted_");
   args::Flag writeLaplacian(output, "writeLaplacian", "Write out the resulting (weak) Laplacian as a sparse matrix. name: 'laplacian.spmat'", {"writeLaplacian"});
   args::Flag writeMass(output, "writeMass", "Write out the resulting diagonal lumped mass matrix sparse matrix. name: 'lumped_mass.spmat'", {"writeMass"});
+  args::Flag debugInfo(output, "debugInfo", "output additional debug info to terminal", {"debugInfo"});
   // clang-format on
 
   // Parse args
@@ -259,9 +263,16 @@ int main(int argc, char** argv) {
   laplacianReplaceVal = args::get(laplacianReplaceValArg);
   massReplaceVal = args::get(massReplaceValArg);
   std::string outputPrefix = args::get(outputPrefixArg);
+  withDebugInfo = debugInfo;
 
   // Load mesh
   SimplePolygonMesh inputMesh(args::get(inputFilename));
+  
+  if (withDebugInfo)
+  {
+	std::cout << "#pts input: " << inputMesh.nVertices() << std::endl;
+	std::cout << "#poly input: " << inputMesh.nFaces() << std::endl;
+  }
 
   // if it's a point cloud, generate some triangles
   // inputMesh.polygons.clear(); // FIXME
@@ -291,6 +302,11 @@ int main(int argc, char** argv) {
   inputMesh.triangulate(); // probably what the user wants
 
   std::tie(mesh, geometry) = makeGeneralHalfedgeAndGeometry(inputMesh.polygons, inputMesh.vertexCoordinates);
+  
+  if (withDebugInfo)
+  {
+	std::cout<< "#pts used: " << inputMesh.nVertices() << std::endl;
+  }
 
 
   // ta-da! (invoke the algorithm from geometry-central)
